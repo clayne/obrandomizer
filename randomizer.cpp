@@ -1,6 +1,7 @@
 #include "randomizer.h"
-#include "ModTable.h"
-#include "GameData.h"
+#include <math.h>
+#include "../obse/obse/obse/ModTable.h"
+#include "../obse/obse/obse/GameData.h"
 
 /*#define FORMMAPADDR 0x00B0613C
 
@@ -446,7 +447,7 @@ void getInventoryFromTESLevItem(TESLevItem* lev, std::map<TESForm*, int>& itemLi
 		else {
 			if (!isQuestItem(data->form) || addQuestItems) {
 				auto it = itemList.find(data->form);
-				int count = max(1, data->count);
+				int count = 1 > data->count ? 1 : data->count;
 				if (it == itemList.end()) {
 					itemList.insert(std::make_pair(data->form, count));
 				}
@@ -501,7 +502,7 @@ bool getInventoryFromTESContainer(TESContainer* container, std::map<TESForm*, in
 			}
 			else if (!isQuestItem(data->type) || addQuestItems) {
 				auto it = itemList.find(data->type);
-				int count = max(1, data->count);
+				int count = 1 > data->count ? 1 : data->count;
 				if (it == itemList.end()) {
 					itemList.insert(std::make_pair(data->type, count));
 				}
@@ -525,7 +526,7 @@ bool getContainerInventory(TESObjectREFR* ref, std::map<TESForm*, int> & itemLis
 	while (cont != NULL && cont->data != NULL && cont->data->objList != NULL) {
 		for (auto it = cont->data->objList->Begin(); !it.End(); ++it) {
 			TESForm* item = it->type;
-			UInt32 count = max(1, it->countDelta); //certain items, for whatever reasons, have count 0
+			UInt32 count = 1 > it->countDelta ? 1 : it->countDelta; // max(1, it->countDelta); //certain items, for whatever reasons, have count 0
 			if (item == obrnFlag) {
 				hasFlag = true;
 #ifdef _DEBUG
@@ -579,7 +580,9 @@ int getRefLevelAdjusted(TESObjectREFR* ref) {
 	}
 	Actor* actor = OBLIVION_CAST(ref, TESObjectREFR, Actor);
 	TESActorBase* actorBase = OBLIVION_CAST(actor->baseForm, TESForm, TESActorBase);
-	return min(1, actorBase->actorBaseData.IsPCLevelOffset() ? getPlayerLevel() + actorBase->actorBaseData.level : actorBase->actorBaseData.level);
+	//return min(1, actorBase->actorBaseData.IsPCLevelOffset() ? getPlayerLevel() + actorBase->actorBaseData.level : actorBase->actorBaseData.level);
+	auto ret = actorBase->actorBaseData.IsPCLevelOffset() ? getPlayerLevel() + actorBase->actorBaseData.level : actorBase->actorBaseData.level;
+	return 1 < ret ? 1 : ret;
 }
 
 void randomizeInventory(TESObjectREFR* ref) {
