@@ -1,4 +1,6 @@
 #include "randomizer.h"
+#include "obse/GameData.h"
+#include <windows.h>
 
 IDebugLog		gLog("obrandomizer.log");
 
@@ -164,7 +166,19 @@ typedef int(__thiscall* ConstructObject_t)(unsigned char*, int, char);
 ConstructObject_t ConstructObject = NULL;
 
 int __fastcall ConstructObject_Hook(unsigned char* _this, void* _edx, int a2, char a3) { //a3 == 1 -> reading from the first file? (master?)
-	int result = ConstructObject(_this, a2, a3);
+	const ModEntry** activeModList = (*g_dataHandler)->GetActiveModList();
+	TESForm* form;
+	int result;
+
+	UInt32 refID = *((UInt32*)(a2 + 584));
+	form = LookupFormByID(refID);
+	if (form == nullptr || skipMod[form->GetModIndex()])
+	{
+		_MESSAGE("Skipping %i", form->GetModIndex());
+		return 0;
+	}
+
+	result = ConstructObject(_this, a2, a3);
 	if (result) {
 		UInt32 refID = *((UInt32*)(a2 + 584));
 		TESForm* form = LookupFormByID(refID);

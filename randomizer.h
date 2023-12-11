@@ -36,6 +36,8 @@ extern OBSEScriptInterface* g_scriptInterface;
 #define ITEM_REPAIRHAMMER 0x0000000C
 #define ITEM_LOCKPICK 0x0000000A
 
+extern bool skipMod[0xFF];
+
 struct LevListResult_t {
 	struct LevListData_t {
 		UInt32 count;
