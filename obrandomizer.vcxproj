@@ -82,6 +82,7 @@
     <PostBuildEvent>
       <Message>Installing DLL...</Message>
       <Command>copy "$(TargetPath)" "D:\Games\Oblivion\mods\oblivion randomizer using modified dll\OBSE\plugins\$(TargetFileName)"</Command>
+      <Command>D:\Games\Oblivion\tools\DebugRandomizer\makeLinks.exe"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

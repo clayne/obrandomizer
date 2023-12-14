@@ -161,6 +161,15 @@ int __fastcall CompileFiles_Hook(DWORD* _this, void* _edx, char a2, char a3) {
 	return result;
 }
 
+int filter(unsigned int code, struct _EXCEPTION_POINTERS* ep) {
+	if (code == EXCEPTION_ACCESS_VIOLATION) {
+		return EXCEPTION_EXECUTE_HANDLER;
+	}
+	else {
+		return EXCEPTION_CONTINUE_SEARCH;
+	};
+}
+
 #define ConstructObject_Addr 0x0044DCF0
 typedef int(__thiscall* ConstructObject_t)(unsigned char*, int, char);
 ConstructObject_t ConstructObject = NULL;
@@ -170,15 +179,12 @@ int __fastcall ConstructObject_Hook(unsigned char* _this, void* _edx, int a2, ch
 	TESForm* form;
 	int result;
 
-	UInt32 refID = *((UInt32*)(a2 + 584));
-	form = LookupFormByID(refID);
-	if (form == nullptr || skipMod[form->GetModIndex()])
-	{
-		_MESSAGE("Skipping %i", form->GetModIndex());
-		return 0;
+	__try {
+		result = ConstructObject(_this, a2, a3);
 	}
-
-	result = ConstructObject(_this, a2, a3);
+	__except (filter(GetExceptionCode(), GetExceptionInformation())) {
+		_MESSAGE("Access Violation Occured");
+	}
 	if (result) {
 		UInt32 refID = *((UInt32*)(a2 + 584));
 		TESForm* form = LookupFormByID(refID);
@@ -186,6 +192,12 @@ int __fastcall ConstructObject_Hook(unsigned char* _this, void* _edx, int a2, ch
 		if (form == NULL) {
 			return result;
 		}
+		if (skipMod[form->GetModIndex()])
+		{
+			_MESSAGE("Skipping %i", form->GetModIndex());
+			return 0;
+		}
+
 		if (form->IsReference()) {
 			TESObjectREFR* ref = OBLIVION_CAST(form, TESForm, TESObjectREFR);
 			if (ref != NULL && ref->baseForm != NULL && 
