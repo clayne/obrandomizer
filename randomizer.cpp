@@ -484,7 +484,13 @@ std::pair<TESForm*, int> getFormFromTESLevItem(TESLevItem* lev, bool addQuestIte
 
 bool getInventoryFromTESContainer(TESContainer* container, std::map<TESForm*, int>& itemList, bool addQuestItems) {
 	bool hasFlag = false;
+	if (container == nullptr)
+		return false;
+
 	auto data = container->list.Info();
+	if (data == nullptr)
+		return false;
+
 	auto next = container->list.Next();
 	while (data != NULL) {
 		if (data->type->GetFormType() == kFormType_LeveledItem) {
