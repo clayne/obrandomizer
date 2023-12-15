@@ -29,6 +29,13 @@ int __fastcall CompileFiles_Hook(DWORD* _this, void* _edx, char a2, char a3) {
 		InitConfig();
 		checked_mods = true;
 	}
+	const ModEntry** activeModList = (*g_dataHandler)->GetActiveModList();
+	const auto modCount = (*g_dataHandler)->GetActiveModCount();
+	_MESSAGE("Mod List");
+	for (int n = 0; n < modCount; n++)
+		_MESSAGE("[%i] %s ", n, activeModList[n]->data->name);
+
+
 	int result = CompileFiles(_this, a2, a3);
 	if (result) {
 		fillUpWpRanges();
