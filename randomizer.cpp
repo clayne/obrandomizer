@@ -1,7 +1,13 @@
 #include "randomizer.h"
+
+#include <chrono>
+#include <ctime>
+#include <cstdarg>
+#include <string>
 #include <math.h>
 #include "../obse/obse/obse/ModTable.h"
 #include "../obse/obse/obse/GameData.h"
+
 
 /*#define FORMMAPADDR 0x00B0613C
 
@@ -46,13 +52,44 @@ UInt8 GetModIndexShifted(const std::string& name) {
 	return id;
 }
 
+void MESSAGE(const char* format, ...) {
+	using namespace std::chrono;
+	system_clock::time_point currentTime = system_clock::now();
+	char buffer1[80];
+
+	auto secondsPart = time_point_cast<seconds>(currentTime);
+	auto millis = duration_cast<milliseconds>(currentTime - secondsPart);
+
+	std::time_t tt = system_clock::to_time_t(currentTime);
+	auto timeinfo = localtime(&tt);
+	strftime(buffer1, 80, "%F %H:%M:%S", timeinfo);
+	snprintf(buffer1 + strlen(buffer1), sizeof(buffer1) - strlen(buffer1), ":%03lld", static_cast<long long>(millis.count()));
+
+	auto ltime = buffer1;
+
+	// Create a buffer for the formatted string using std::string
+	char buffer[1024]; // Adjust the size as needed
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer, sizeof(buffer), format, args);
+	va_end(args);
+
+	// Combine timestamp and formatted string using std::string
+	std::string result = ltime;
+	result += " - ";
+	result += buffer;
+
+	// Pass the const char* to _MESSAGE function
+	_MESSAGE(result.c_str());
+}
+
 void InitModExcludes() {
 	randId = GetModIndexShifted("Randomizer.esp");
 	for (int i = 0; i < 0xFF; ++i) {
 		skipMod[i] = false;
 	}
 	if (randId != 0xFF) {
-		_MESSAGE("Randomizer.esp's ID is %02X", randId);
+		MESSAGE("Randomizer.esp's ID is %02X", randId);
 		skipMod[randId] = true;
 	}
 	else {
@@ -71,7 +108,7 @@ void InitModExcludes() {
 			continue;
 		}
 		skipMod[id] = true;
-		_MESSAGE("Skipping mod %s\n", buf);
+		MESSAGE("Skipping mod %s\n", buf);
 	}
 	fclose(f);
 }
@@ -202,7 +239,7 @@ bool tryToAddForm(TESForm* f) {
 	}
 	if (obrnFlag == NULL && f->GetModIndex() == randId && f->GetFormType() == kFormType_Misc && strcmp(name, "You should not see this") == 0) {
 		obrnFlag = f;
-		_MESSAGE("OBRN Flag found as %08X", f->refID);
+		MESSAGE("OBRN Flag found as %08X", f->refID);
 		return false;
 	}
 	if (f->GetModIndex() == 0xFF || skipMod[f->GetModIndex()]) {
@@ -240,7 +277,7 @@ bool tryToAddForm(TESForm* f) {
 			}
 		}
 #ifdef DEBUG
-		_MESSAGE("Skipping %08X (%s)", f->refID, name);
+		MESSAGE("Skipping %08X (%s)", f->refID, name);
 #endif
 		break;
 	}
@@ -474,7 +511,7 @@ std::pair<TESForm*, int> getFormFromTESLevItem(TESLevItem* lev, bool addQuestIte
 	for (auto it : itemList) {
 		if (++i == r) {
 #ifdef _DEBUG
-			_MESSAGE("%s: we are returning %s %08X from the leveled list", __FUNCTION__, GetFullName(it.first), it.second);
+			MESSAGE("%s: we are returning %s %08X from the leveled list", __FUNCTION__, GetFullName(it.first), it.second);
 #endif
 			return it;
 		}
@@ -502,7 +539,7 @@ bool getInventoryFromTESContainer(TESContainer* container, std::map<TESForm*, in
 		else {
 			if (data->type == obrnFlag) {
 #ifdef _DEBUG
-				_MESSAGE("%s: OBRN Flag has been found for", __FUNCTION__);
+				MESSAGE("%s: OBRN Flag has been found for", __FUNCTION__);
 #endif
 				hasFlag = true;
 			}
@@ -536,11 +573,11 @@ bool getContainerInventory(TESObjectREFR* ref, std::map<TESForm*, int> & itemLis
 			if (item == obrnFlag) {
 				hasFlag = true;
 #ifdef _DEBUG
-				_MESSAGE("%s: OBRN Flag has been found for %s (%08X)", __FUNCTION__, GetFullName(ref), ref->refID);
+				MESSAGE("%s: OBRN Flag has been found for %s (%08X)", __FUNCTION__, GetFullName(ref), ref->refID);
 #endif
 				continue;
 			}
-			//_MESSAGE("Ref: %s (%08X) (base: %s %08X) : found a %s (%08X %s), quantity: %i",
+			//MESSAGE("Ref: %s (%08X) (base: %s %08X) : found a %s (%08X %s), quantity: %i",
 			//	GetFullName(ref), ref->refID, GetFullName(ref->baseForm), ref->baseForm->refID, GetFullName(item), item->refID, FormToString(item->GetFormType()), count);
 			TESScriptableForm* scriptForm = OBLIVION_CAST(item, TESForm, TESScriptableForm);
 			if (GetFullName(item)[0] != '<' && (addQuestItems || (!item->IsQuestItem() && (!oExcludeQuestItems || scriptForm == NULL || scriptForm->script == NULL)))) {
@@ -602,7 +639,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 			return;
 		}
 #ifdef _DEBUG
-		_MESSAGE("%s %08X didn't have the flag - adding it now", GetFullName(ref), ref->refID);
+		MESSAGE("%s %08X didn't have the flag - adding it now", GetFullName(ref), ref->refID);
 #endif
 		ref->AddItem(obrnFlag, NULL, 1);
 	}
@@ -624,7 +661,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 				if (getRandomByType(item, selection)) {
 					TESForm* newItem = LookupFormByID(selection);
 #ifdef _DEBUG
-					_MESSAGE("Replacing item %s %08X with %s %08X x%i", GetFullName(item), item->refID, GetFullName(newItem), newItem->refID, cnt);
+					MESSAGE("Replacing item %s %08X with %s %08X x%i", GetFullName(item), item->refID, GetFullName(newItem), newItem->refID, cnt);
 #endif
 					ref->AddItem(newItem, NULL, cnt);
 					if (ref->GetFormType() == kFormType_ACHR && itemIsEquippable(newItem)) {
@@ -651,7 +688,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 		//Gold
 		if (roll < 50) {
 #ifdef _DEBUG
-			_MESSAGE("GOLD: %s receiving gold", GetFullName(ref));
+			MESSAGE("GOLD: %s receiving gold", GetFullName(ref));
 #endif
 			ref->AddItem(LookupFormByID(ITEM_GOLD), NULL, myrand(5, 60) * level);
 		}
@@ -672,7 +709,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 				if (getRandomForKey(&allWeapons, TESObjectWEAP::kType_BladeOneHand, selection)) {
 					TESObjectWEAP* wp = OBLIVION_CAST(LookupFormByID(selection), TESForm, TESObjectWEAP);
 #ifdef _DEBUG
-					_MESSAGE("BLADE: %s receiving %s", GetFullName(ref), GetFullName(wp));
+					MESSAGE("BLADE: %s receiving %s", GetFullName(ref), GetFullName(wp));
 #endif
 					ref->AddItem(wp, NULL, 1);
 					if (!i) {
@@ -687,7 +724,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 				if (getRandomForKey(&allWeapons, TESObjectWEAP::kType_BluntOneHand, selection)) {
 					TESObjectWEAP* wp = OBLIVION_CAST(LookupFormByID(selection), TESForm, TESObjectWEAP);
 #ifdef _DEBUG
-					_MESSAGE("BLUNT: %s receiving %s", GetFullName(ref), GetFullName(wp));
+					MESSAGE("BLUNT: %s receiving %s", GetFullName(ref), GetFullName(wp));
 #endif
 					ref->AddItem(wp, NULL, 1);
 					if (!i) {
@@ -702,7 +739,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 				if (getRandomForKey(&allWeapons, TESObjectWEAP::kType_Staff, selection)) {
 					TESObjectWEAP* wp = OBLIVION_CAST(LookupFormByID(selection), TESForm, TESObjectWEAP);
 #ifdef _DEBUG
-					_MESSAGE("STAFF: %s receiving %s", GetFullName(ref), GetFullName(wp));
+					MESSAGE("STAFF: %s receiving %s", GetFullName(ref), GetFullName(wp));
 #endif
 					ref->AddItem(wp, NULL, 1);
 					if (!i) {
@@ -714,7 +751,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 				if (getRandomForKey(&allWeapons, TESObjectWEAP::kType_Bow, selection)) {
 					TESObjectWEAP* wp = OBLIVION_CAST(LookupFormByID(selection), TESForm, TESObjectWEAP);
 #ifdef _DEBUG
-					_MESSAGE("BOW: %s receiving %s", GetFullName(ref), GetFullName(wp));
+					MESSAGE("BOW: %s receiving %s", GetFullName(ref), GetFullName(wp));
 #endif
 					ref->AddItem(wp, NULL, 1);
 					if (!i) {
@@ -725,7 +762,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 				}
 			default:
 #ifdef _DEBUG
-				_MESSAGE("UNARMED: %s is unarmed", GetFullName(ref));
+				MESSAGE("UNARMED: %s is unarmed", GetFullName(ref));
 #endif
 				break;
 			}
@@ -735,7 +772,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 				if (getRandomForKey(&allWeapons, TESObjectWEAP::kType_Bow, selection)) {
 					TESObjectWEAP* wp = OBLIVION_CAST(LookupFormByID(selection), TESForm, TESObjectWEAP);
 #ifdef _DEBUG
-					_MESSAGE("BOW: %s receiving %s", GetFullName(ref), GetFullName(wp));
+					MESSAGE("BOW: %s receiving %s", GetFullName(ref), GetFullName(wp));
 #endif
 					ref->AddItem(wp, NULL, 1);
 					ref->Equip(wp, 1, NULL, 0);
@@ -750,7 +787,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 				if (getRandomForKey(&allGenericItems, kFormType_Ammo, selection)) {
 					TESForm* ammo = LookupFormByID(selection);
 #ifdef _DEBUG
-					_MESSAGE("ARROW: %s receiving %s", GetFullName(ref), GetFullName(ammo));
+					MESSAGE("ARROW: %s receiving %s", GetFullName(ref), GetFullName(ammo));
 #endif
 					ref->AddItem(ammo, NULL, myrand(5, 30));
 					if (!i) {
@@ -766,7 +803,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 		if (!gotTwoHanded && !myrand(0, 2) && getRandomForKey(&allClothingAndArmor, kSlot_Shield, selection)) {
 			TESForm* shield = LookupFormByID(selection);
 #ifdef _DEBUG
-			_MESSAGE("SHIELD: %s receiving %s", GetFullName(ref), GetFullName(shield));
+			MESSAGE("SHIELD: %s receiving %s", GetFullName(ref), GetFullName(shield));
 #endif
 			ref->AddItem(shield, NULL, 1);
 			ref->Equip(shield, 1, NULL, 0);
@@ -817,7 +854,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 				if (getRandomForKey(&allClothingAndArmor, clothingKeys[v], selection)) {
 					TESForm* cloth = LookupFormByID(selection);
 #ifdef _DEBUG
-					_MESSAGE("UPPER: %s receiving %s", GetFullName(ref), GetFullName(cloth));
+					MESSAGE("UPPER: %s receiving %s", GetFullName(ref), GetFullName(cloth));
 #endif
 					ref->AddItem(cloth, NULL, 1);
 					ref->Equip(cloth, 1, NULL, 0);
@@ -833,7 +870,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 			if (getRandomForKey(&allClothingAndArmor, kSlot_LowerBody, selection)) {
 				TESForm* cloth = LookupFormByID(selection);
 #ifdef _DEBUG
-				_MESSAGE("LOWER: %s receiving %s", GetFullName(ref), GetFullName(cloth));
+				MESSAGE("LOWER: %s receiving %s", GetFullName(ref), GetFullName(cloth));
 #endif
 				ref->AddItem(cloth, NULL, 1);
 				ref->Equip(cloth, 1, NULL, 0);
@@ -843,7 +880,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 			if (getRandomForKey(&allClothingAndArmor, kSlot_Foot, selection)) {
 				TESForm* cloth = LookupFormByID(selection);
 #ifdef _DEBUG
-				_MESSAGE("FOOT: %s receiving %s", GetFullName(ref), GetFullName(cloth));
+				MESSAGE("FOOT: %s receiving %s", GetFullName(ref), GetFullName(cloth));
 #endif
 				ref->AddItem(cloth, NULL, 1);
 				ref->Equip(cloth, 1, NULL, 0);
@@ -853,7 +890,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 			if (getRandomForKey(&allClothingAndArmor, kSlot_Hand, selection)) {
 				TESForm* cloth = LookupFormByID(selection);
 #ifdef _DEBUG
-				_MESSAGE("HAND: %s receiving %s", GetFullName(ref), GetFullName(cloth));
+				MESSAGE("HAND: %s receiving %s", GetFullName(ref), GetFullName(cloth));
 #endif
 				ref->AddItem(cloth, NULL, 1);
 				ref->Equip(cloth, 1, NULL, 0);
@@ -864,7 +901,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 			if (getRandomForKey(&allClothingAndArmor, kSlot_Head, selection)) {
 				TESForm* cloth = LookupFormByID(selection);
 #ifdef _DEBUG
-				_MESSAGE("HEAD: %s receiving %s", GetFullName(ref), GetFullName(cloth));
+				MESSAGE("HEAD: %s receiving %s", GetFullName(ref), GetFullName(cloth));
 #endif
 				ref->AddItem(cloth, NULL, 1);
 				ref->Equip(cloth, 1, NULL, 0);
@@ -876,7 +913,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 				if (getRandomForKey(&allClothingAndArmor, kSlot_LeftRing, selection)) {
 					TESForm* cloth = LookupFormByID(selection);
 #ifdef _DEBUG
-					_MESSAGE("RING: %s receiving %s", GetFullName(ref), GetFullName(cloth));
+					MESSAGE("RING: %s receiving %s", GetFullName(ref), GetFullName(cloth));
 #endif
 					ref->AddItem(cloth, NULL, 1);
 					ref->Equip(cloth, 1, NULL, 0);
@@ -888,7 +925,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 			if (getRandomForKey(&allClothingAndArmor, kSlot_Amulet, selection)) {
 				TESForm* cloth = LookupFormByID(selection);
 #ifdef _DEBUG
-				_MESSAGE("AMULET: %s receiving %s", GetFullName(ref), GetFullName(cloth));
+				MESSAGE("AMULET: %s receiving %s", GetFullName(ref), GetFullName(cloth));
 #endif
 				ref->AddItem(cloth, NULL, 1);
 				ref->Equip(cloth, 1, NULL, 0);
@@ -902,7 +939,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 			if (getRandomForKey(&allGenericItems, kFormType_AlchemyItem, selection)) {
 				TESForm* item = LookupFormByID(selection);
 #ifdef _DEBUG
-				_MESSAGE("POTION: %s receiving %s", GetFullName(ref), GetFullName(item));
+				MESSAGE("POTION: %s receiving %s", GetFullName(ref), GetFullName(item));
 #endif
 				ref->AddItem(item, NULL, myrand(1, 4));
 			}
@@ -915,7 +952,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 			if (getRandomForKey(&allGenericItems, kFormType_SoulGem, selection)) {
 				TESForm* item = LookupFormByID(selection);
 #ifdef _DEBUG
-				_MESSAGE("SOULGEM: %s receiving %s", GetFullName(ref), GetFullName(item));
+				MESSAGE("SOULGEM: %s receiving %s", GetFullName(ref), GetFullName(item));
 #endif
 				ref->AddItem(item, NULL, myrand(1, 2));
 			}
@@ -925,7 +962,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 			if (getRandomForKey(&allGenericItems, kFormType_SigilStone, selection)) {
 				TESForm* item = LookupFormByID(selection);
 #ifdef _DEBUG
-				_MESSAGE("SIGILSTONE: %s receiving %s", GetFullName(ref), GetFullName(item));
+				MESSAGE("SIGILSTONE: %s receiving %s", GetFullName(ref), GetFullName(item));
 #endif
 				ref->AddItem(item, NULL, 1);
 			}
@@ -936,7 +973,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 				if (getRandomForKey(&allGenericItems, kFormType_Ingredient, selection)) {
 					TESForm* item = LookupFormByID(selection);
 #ifdef _DEBUG
-					_MESSAGE("INGREDIENT: %s receiving %s", GetFullName(ref), GetFullName(item));
+					MESSAGE("INGREDIENT: %s receiving %s", GetFullName(ref), GetFullName(item));
 #endif
 					ref->AddItem(item, NULL, myrand(1, 6));
 				}
@@ -951,7 +988,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 				if (getRandomForKey(&allGenericItems, kFormType_Apparatus, selection)) {
 					TESForm* item = LookupFormByID(selection);
 #ifdef _DEBUG
-					_MESSAGE("APPARATUS: %s receiving %s", GetFullName(ref), GetFullName(item));
+					MESSAGE("APPARATUS: %s receiving %s", GetFullName(ref), GetFullName(item));
 #endif
 					ref->AddItem(item, NULL, myrand(1, 2));
 				}
@@ -966,7 +1003,7 @@ void randomizeInventory(TESObjectREFR* ref) {
 				if (getRandomForKey(&allGenericItems, kFormType_Misc, selection)) {
 					TESForm* item = LookupFormByID(selection);
 #ifdef _DEBUG
-					_MESSAGE("GENERIC: %s receiving %s", GetFullName(ref), GetFullName(item));
+					MESSAGE("GENERIC: %s receiving %s", GetFullName(ref), GetFullName(item));
 #endif
 					ref->AddItem(item, NULL, myrand(1, 3));
 				}
@@ -1283,14 +1320,14 @@ bool getRandomBySetting(TESForm* f, UInt32& out, int option) {
 	case 2:
 		return getRandom(f, out);
 	default:
-		_MESSAGE("Invalid option %i for getRandomBySetting", option);
+		MESSAGE("Invalid option %i for getRandomBySetting", option);
 		return false;
 	}
 }
 
 void randomize(TESObjectREFR* ref, const char* function) {
 #ifdef _DEBUG
-	_MESSAGE("%s: Attempting to randomize %s %08X", function, GetFullName(ref), ref->refID);
+	MESSAGE("%s: Attempting to randomize %s %08X", function, GetFullName(ref), ref->refID);
 #endif
 	if (ref->GetFormType() == kFormType_ACRE) {
 		if (allCreatures.size() == 0) {
@@ -1313,7 +1350,7 @@ void randomize(TESObjectREFR* ref, const char* function) {
 				return;
 			}
 #ifdef _DEBUG
-			_MESSAGE("%s: Dead creature %s %08X will be treated as a container", function, GetFullName(ref), ref->refID);
+			MESSAGE("%s: Dead creature %s %08X will be treated as a container", function, GetFullName(ref), ref->refID);
 #endif
 			randomizeInventory(ref);
 			return;
@@ -1327,7 +1364,7 @@ void randomize(TESObjectREFR* ref, const char* function) {
 			getInventoryFromTESContainer(&creature->container, keepItems, true);
 		}
 #ifdef _DEBUG
-		_MESSAGE("%s: Going to randomize %s %08X into %s %08X", function, GetFullName(ref), ref->refID, GetFullName(rando), rando->refID);
+		MESSAGE("%s: Going to randomize %s %08X into %s %08X", function, GetFullName(ref), ref->refID, GetFullName(rando), rando->refID);
 #endif
 		//TESActorBase* actorBase = OBLIVION_CAST(rando, TESForm, TESActorBase);
 		ref->baseForm = rando;
@@ -1344,13 +1381,13 @@ void randomize(TESObjectREFR* ref, const char* function) {
 			return;
 		}
 #ifdef _DEBUG
-		_MESSAGE("%s: World item randomization: will try to randomize %s %08X", function, GetFullName(ref), ref->refID);
+		MESSAGE("%s: World item randomization: will try to randomize %s %08X", function, GetFullName(ref), ref->refID);
 #endif
 		UInt32 selection;
 		if (getRandomBySetting(ref->baseForm, selection, oWorldItems)) {
 			TESForm* rando = LookupFormByID(selection);
 #ifdef _DEBUG
-			_MESSAGE("%s: Going to randomize %s %08X into %s %08X", function, GetFullName(ref), ref->refID, GetFullName(rando), rando->refID);
+			MESSAGE("%s: Going to randomize %s %08X into %s %08X", function, GetFullName(ref), ref->refID, GetFullName(rando), rando->refID);
 #endif
 			ref->baseForm = rando;
 			ref->Update3D();

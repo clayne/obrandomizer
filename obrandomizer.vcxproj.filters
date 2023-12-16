@@ -6,9 +6,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\obse\obse\GameActorValues.cpp">
-      <Filter>obse</Filter>
-    </ClCompile>
     <ClCompile Include="..\obse\obse\obse\GameAPI.cpp">
       <Filter>obse</Filter>
     </ClCompile>
@@ -55,6 +52,7 @@
     </ClCompile>
     <ClCompile Include="hook.cpp" />
     <ClCompile Include="randomizer.cpp" />
+    <ClCompile Include="..\obse\obse\obse\GameActorValues.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\obse\obse\obse\GameActorValues.h">
@@ -107,6 +105,7 @@
     </ClInclude>
     <ClInclude Include="hook.h" />
     <ClInclude Include="randomizer.h" />
+    <ClInclude Include="..\obse\obse\obse\ModTable.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\obse\obse\obse\GameRTTI_1_2_416.inl">

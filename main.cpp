@@ -31,10 +31,12 @@ int __fastcall CompileFiles_Hook(DWORD* _this, void* _edx, char a2, char a3) {
 	}
 	const ModEntry** activeModList = (*g_dataHandler)->GetActiveModList();
 	const auto modCount = (*g_dataHandler)->GetActiveModCount();
-	_MESSAGE("Mod List");
-	for (int n = 0; n < modCount; n++)
-		_MESSAGE("[%i] %s ", n, activeModList[n]->data->name);
+#ifdef TRACE
+	MESSAGE("Mod List");
 
+	for (int n = 0; n < modCount; n++)
+		MESSAGE("[%i] %s ", n, activeModList[n]->data->name);
+#endif
 
 	int result = CompileFiles(_this, a2, a3);
 	if (result) {
@@ -59,7 +61,7 @@ int __fastcall CompileFiles_Hook(DWORD* _this, void* _edx, char a2, char a3) {
 #ifdef _DEBUG
 		UInt32 numArmorClothing = 0, numWeapons = 0, numGenericItems = 0, numCreatures = allCreatures.size();
 		const char* name = NULL;
-		_MESSAGE("At the end of the list generation, we have:");
+		MESSAGE("At the end of the list generation, we have:");
 		for (auto it = allClothingAndArmor.begin(); it != allClothingAndArmor.end(); ++it) {
 			switch (it->first) {
 			case kSlot_Head:
@@ -117,9 +119,9 @@ int __fastcall CompileFiles_Hook(DWORD* _this, void* _edx, char a2, char a3) {
 				name = "Unknown";
 				break;
 			}
-			_MESSAGE("(CLOTHING) %s (%i): %i", name, it->first, it->second.size());
+			MESSAGE("(CLOTHING) %s (%i): %i", name, it->first, it->second.size());
 			for (auto cloth = it->second.begin(); cloth != it->second.end(); ++cloth) {
-				_MESSAGE("\t%s", GetFullName(LookupFormByID(*cloth)));
+				MESSAGE("\t%s", GetFullName(LookupFormByID(*cloth)));
 			}
 			numArmorClothing += it->second.size();
 		}
@@ -141,28 +143,28 @@ int __fastcall CompileFiles_Hook(DWORD* _this, void* _edx, char a2, char a3) {
 				name = "Unknown Weapon";
 				break;
 			}
-			_MESSAGE("(WEAPON) %s: %i", name, it->second.size());
+			MESSAGE("(WEAPON) %s: %i", name, it->second.size());
 			for (auto wp = it->second.begin(); wp != it->second.end(); ++wp) {
-				_MESSAGE("\t%s", GetFullName(LookupFormByID(*wp)));
+				MESSAGE("\t%s", GetFullName(LookupFormByID(*wp)));
 			}
 			numWeapons += it->second.size();
 		}
 		for (auto it = allGenericItems.begin(); it != allGenericItems.end(); ++it) {
 			name = FormToString(it->first);
-			_MESSAGE("(GENERIC): %s: %i", name, it->second.size());
+			MESSAGE("(GENERIC): %s: %i", name, it->second.size());
 			for (auto g = it->second.begin(); g != it->second.end(); ++g) {
-				_MESSAGE("\t%s", GetFullName(LookupFormByID(*g)));
+				MESSAGE("\t%s", GetFullName(LookupFormByID(*g)));
 			}
 			numGenericItems += it->second.size();
 		}
-		_MESSAGE("(CREATURE): %i", numCreatures);
+		MESSAGE("(CREATURE): %i", numCreatures);
 		for (auto it = allCreatures.begin(); it != allCreatures.end(); ++it) {
-			_MESSAGE("\t%s", GetFullName(LookupFormByID(*it)));
+			MESSAGE("\t%s", GetFullName(LookupFormByID(*it)));
 		}
 		if (oRandInventory) {
-			_MESSAGE("There are %u total items", allItems.size());
+			MESSAGE("There are %u total items", allItems.size());
 		}
-		_MESSAGE("There are %u weapons, %u generic items, %u pieces of clothing / armor and %u creatures in the lists", numWeapons, numGenericItems, numArmorClothing, numCreatures);
+		MESSAGE("There are %u weapons, %u generic items, %u pieces of clothing / armor and %u creatures in the lists", numWeapons, numGenericItems, numArmorClothing, numCreatures);
 #endif
 	}
 	return result;
@@ -190,7 +192,7 @@ int __fastcall ConstructObject_Hook(unsigned char* _this, void* _edx, int a2, ch
 		result = ConstructObject(_this, a2, a3);
 	}
 	__except (filter(GetExceptionCode(), GetExceptionInformation())) {
-		_MESSAGE("Access Violation Occured");
+		MESSAGE("Access Violation Occured");
 	}
 	if (result) {
 		UInt32 refID = *((UInt32*)(a2 + 584));
@@ -201,7 +203,7 @@ int __fastcall ConstructObject_Hook(unsigned char* _this, void* _edx, int a2, ch
 		}
 		if (skipMod[form->GetModIndex()])
 		{
-			_MESSAGE("Skipping %i", form->GetModIndex());
+			MESSAGE("Skipping %i", form->GetModIndex());
 			return 0;
 		}
 
@@ -294,7 +296,7 @@ unsigned int __fastcall LoadObject_Hook(DWORD* _this, void* _edx, int a2, int a3
 		if ((it->second & TESObjectREFR::kFlags_Persistent) != (it->first->flags & TESObjectREFR::kFlags_Persistent)) {
 			it->first->flags ^= TESObjectREFR::kFlags_Persistent;
 		}
-		//_MESSAGE("Old flags: %i, new flags - old flags = %i\n", it->second, it->first->flags & ~it->second);
+		//MESSAGE("Old flags: %i, new flags - old flags = %i\n", it->second, it->first->flags & ~it->second);
 		//it->first->flags |= (it->second & ~(0x00200000 | TESObjectREFR::kFlags_Persistent));
 		//this is a problem, because i do not know if it should be left in or not
 		//there are plenty of flags that are not documented and determining what
@@ -332,7 +334,7 @@ void __fastcall CalcLevListOuter_Hook(TESLeveledList* _this, void* _edx, int a2,
 				else if (result->data->item->GetFormType() == kFormType_Creature) {
 					TESForm* rando = LookupFormByID(allCreatures[rand() % allCreatures.size()]), * old = result->data->item;
 #ifdef _DEBUG
-					_MESSAGE("%s: Going to randomize %s %08X into %s %08X", __FUNCTION__, GetFullName(old), old->refID, GetFullName(rando), rando->refID);
+					MESSAGE("%s: Going to randomize %s %08X into %s %08X", __FUNCTION__, GetFullName(old), old->refID, GetFullName(rando), rando->refID);
 #endif
 					result->data->item = rando;
 				}
@@ -355,7 +357,14 @@ char __fastcall LoadGame_Hook(int _this, void* _edx, int a2, int a3, char a4) {
 	//b) i was meant to release this mod 3 months ago
 	//c) it would take time
 	loading_game = true;
-	char result = LoadGame(_this, a2, a3, a4);
+	char result;
+	__try {
+		result = LoadGame(_this, a2, a3, a4);
+	}
+	__except (filter(GetExceptionCode(), GetExceptionInformation())) {
+		MESSAGE("Access Violation Occured");
+	}
+
 	loading_game = false;
 	for (auto it : toRandomize) {
 		randomize(it, __FUNCTION__);
@@ -419,7 +428,7 @@ extern "C" {
 
 bool OBSEPlugin_Query(const OBSEInterface * obse, PluginInfo * info)
 {
-	_MESSAGE("query");
+	MESSAGE("query");
 
 	// fill out the info structure
 	info->infoVersion = PluginInfo::kInfoVersion;
@@ -477,7 +486,7 @@ bool OBSEPlugin_Query(const OBSEInterface * obse, PluginInfo * info)
 
 bool OBSEPlugin_Load(const OBSEInterface * obse)
 {
-	_MESSAGE("load");
+	MESSAGE("load");
 
 	g_pluginHandle = obse->GetPluginHandle();
 
@@ -517,12 +526,12 @@ bool OBSEPlugin_Load(const OBSEInterface * obse)
 	if (cmdIntfc) {
 #if 0	// enable the following for loads of log output
 		for (const CommandInfo* cur = cmdIntfc->Start(); cur != cmdIntfc->End(); ++cur) {
-			_MESSAGE("%s",cur->longName);
+			MESSAGE("%s",cur->longName);
 		}
 #endif
 	}
 	else {
-		_MESSAGE("Couldn't read command table");
+		MESSAGE("Couldn't read command table");
 	}
 	return true;
 }
