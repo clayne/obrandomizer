@@ -208,17 +208,9 @@ int __fastcall ConstructObject_Hook(unsigned char* _this, void* _edx, int a2, ch
 
 	if (_this == nullptr)
 	{
-		MESSAGE("Exiting from ConstructObject becasue _this is null.");
+		MESSAGE("Exiting from ConstructObject because _this is null.");
 		return 0;
 	}
-
-	/*
-	if (!a3)
-	{
-		MESSAGE("Exiting from ConstructObject becasue a3 is null.");
-		return 0;
-	}
-	*/
 
 	result = ConstructObject(_this, a2, a3);
 
@@ -409,7 +401,7 @@ void __fastcall CalcLevListOuter_Hook(TESLeveledList* _this, void* _edx, int a2,
 	TRACEMESSAGE("End  : %s", __func__);
 #endif
 }
-
+/*
 //465D57 is the last addr where its still good
 #define LoadGame_Addr 0x00465860
 typedef char(__thiscall* LoadGame_t)(int, int, int, char);
@@ -428,12 +420,6 @@ char __fastcall LoadGame_Hook(int _this, void* _edx, int a2, int a3, char a4) {
 	loading_game = true;
 	char result;
 
-	if (!a4)
-	{
-		MESSAGE("Exiting from load game because a4 is null.");
-		return 0;
-	}
-
 	result = LoadGame(_this, a2, a3, a4);
 
 	loading_game = false;
@@ -446,7 +432,7 @@ char __fastcall LoadGame_Hook(int _this, void* _edx, int a2, int a3, char a4) {
 #endif
 	return result;
 }
-
+*/
 void InitHooks() {
 	InitTrampHook(ConstructObject, 8);
 	InitTrampHook(CompileFiles, 8);
@@ -455,7 +441,7 @@ void InitHooks() {
 	InitTrampHook(AddItem, 6);
 	InitTrampHook(LoadObject, 11);
 	InitTrampHook(CalcLevListOuter, 7);
-	InitTrampHook(LoadGame, 7);
+	//InitTrampHook(LoadGame, 7);
 }
 
 unsigned int getNumItems(ItemMapPtr map) {
