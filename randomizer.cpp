@@ -26,6 +26,7 @@ std::map<TESObjectREFR*, UInt32> restoreFlags;
 
 TESForm* obrnFlag = NULL;
 
+static int indent = 0;
 int clothingRanges[CRANGE_MAX];
 int weaponRanges[WRANGE_MAX];
 
@@ -41,14 +42,23 @@ bool skipMod[0xFF] = { 0 };
 UInt8 randId = 0xFF;
 
 UInt8 GetModIndexShifted(const std::string& name) {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	UInt8 id = ModTable::Get().GetModIndex(name);
 	if (id == 0xFF) {
+#ifdef TRACE
+		TRACEMESSAGE("End  : %s - id = 255", __func__);
+#endif
 		return id;
 	}
 	const ModEntry** activeModList = (*g_dataHandler)->GetActiveModList();
 	if (stricmp(activeModList[0]->data->name, "oblivion.esm") && stricmp(activeModList[id]->data->name, name.c_str()) == 0) {
 		++id;
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 	return id;
 }
 
@@ -68,7 +78,7 @@ void MESSAGE(const char* format, ...) {
 	auto ltime = buffer1;
 
 	// Create a buffer for the formatted string using std::string
-	char buffer[1024]; // Adjust the size as needed
+	char buffer[1024] = ""; // Adjust the size as needed
 	va_list args;
 	va_start(args, format);
 	vsnprintf(buffer, sizeof(buffer), format, args);
@@ -83,7 +93,70 @@ void MESSAGE(const char* format, ...) {
 	_MESSAGE(result.c_str());
 }
 
+void TRACEMESSAGE(TESForm* f, const char* format, ...)
+{
+	if (indent < 0)
+		indent = 0;
+	
+	// Create a buffer for the formatted string using std::string
+	char buffer[1024]; // Adjust the size as needed
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer, sizeof(buffer), format, args);
+	va_end(args);
+
+	char buffer1[1024] = "";
+	if (f != nullptr)
+	{
+		std::sprintf(buffer1, "\t indent: %8i \t mod: %4i \t ref: %08X \t ", indent, f->GetModIndex(), f->refID);
+	}
+
+	std::string result(buffer1);
+	for (int n = 0; n < indent; n++)
+		result += "==";
+	result += buffer;
+
+	// Pass the const char* to _MESSAGE function
+	
+	if (result.find("Start:") || result.find("start:"))
+		indent++;
+	if (result.find("End  :") || result.find("end  :"))
+		indent--;
+	MESSAGE(result.c_str());
+}
+
+void TRACEMESSAGE(const char* format, ...)
+{
+	return;
+	if (indent < 0)
+		indent = 0;
+
+	// Create a buffer for the formatted string using std::string
+	char buffer[1024]; // Adjust the size as needed
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer, sizeof(buffer), format, args);
+	va_end(args);
+
+	std::string result = "";
+
+	for (int n = 0; n < indent; n++)
+		result += "==";
+	result += buffer;
+
+	// Pass the const char* to _MESSAGE function
+
+	if (result.find("Start:") || result.find("start:"))
+		indent++;
+	if (result.find("End  :") || result.find("end  :"))
+		indent--;
+	MESSAGE(result.c_str());
+}
+
 void InitModExcludes() {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	randId = GetModIndexShifted("Randomizer.esp");
 	for (int i = 0; i < 0xFF; ++i) {
 		skipMod[i] = false;
@@ -97,6 +170,9 @@ void InitModExcludes() {
 	}
 	FILE* f = fopen("Data/RandomizerSkip.cfg", "r");
 	if (f == NULL) {
+#ifdef TRACE
+		TRACEMESSAGE("End  : %s failed to open file", __func__);
+#endif
 		return;
 	}
 	char buf[256] = { 0 };
@@ -111,14 +187,26 @@ void InitModExcludes() {
 		MESSAGE("Skipping mod %s\n", buf);
 	}
 	fclose(f);
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 }
 
 char* cfgeol(char* s) {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	for (char *p = s; *p != 0; ++p) {
 		if (*p == ';' || *p == '\t' || *p == '\n' || *p == '\r') {
+#ifdef TRACE
+			TRACEMESSAGE("End  : %s", __func__);
+#endif
 			return p;
 		}
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s returned null", __func__);
+#endif
 	return NULL;
 }
 
@@ -137,8 +225,14 @@ if (strncmp(line, str, len) == 0 && isspace(line[len])) {\
 
 //this is not an elegant solution but i dont want to split the config into two files
 void InitConfig() {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	FILE* f = fopen("Data/Randomizer.cfg", "r");
 	if (f == NULL) {
+#ifdef TRACE
+		TRACEMESSAGE("End  : %s unable to open file", __func__);
+#endif
 		return;
 	}
 	char buf[256] = { 0 };
@@ -158,10 +252,16 @@ void InitConfig() {
 		//set ZZZOBRNRandomQuest.oExcludeQuestItems to 1
 	}
 	fclose(f);
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 }
 
 int clothingKeys[] = { kSlot_UpperBody, kSlot_UpperHand, kSlot_UpperLower, kSlot_UpperLowerFoot, kSlot_UpperLowerHandFoot, kSlot_UpperLowerHand, -1 };
 void fillUpClothingRanges() {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	for (int i = 0; i < CRANGE_MAX; ++i) {
 		clothingRanges[i] = 0;
 	}
@@ -175,9 +275,15 @@ void fillUpClothingRanges() {
 	for (int i = 1; i < CRANGE_MAX; ++i) {
 		clothingRanges[i] += clothingRanges[i - 1];
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 }
 
 void fillUpWpRanges() {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	int wpKeys[] = { TESObjectWEAP::kType_BladeOneHand, TESObjectWEAP::kType_BluntOneHand, TESObjectWEAP::kType_Staff, TESObjectWEAP::kType_Bow, -1 };
 	int maxUnarmed = 0;
 	for (int i = 0; i < WRANGE_MAX; ++i) {
@@ -194,19 +300,34 @@ void fillUpWpRanges() {
 	for (int i = 1; i < WRANGE_MAX; ++i) {
 		weaponRanges[i] += weaponRanges[i - 1];
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 }
 
 bool getRandomForKey(ItemMapPtr map, const UInt32 key, UInt32& out) {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	auto it = map->find(key);
 	if (it == map->end() || !it->second.size()) {
 		_ERROR("Couldn't find key %u for map %s\n", key, (map == &allWeapons ? "weapons" : (map == &allClothingAndArmor ? "clothing & armor" : "generic")));
+#ifdef TRACE
+		TRACEMESSAGE("End  : %s - could not find key", __func__);
+#endif
 		return false;
 	}
 	out = it->second[rand() % it->second.size()];
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 	return true;
 }
 
 void addOrAppend(ItemMapPtr map, const UInt32 key, const UInt32 value) {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	allAdded.insert(value);
 	auto it = map->find(key);
 	if (it == map->end()) {
@@ -217,42 +338,79 @@ void addOrAppend(ItemMapPtr map, const UInt32 key, const UInt32 value) {
 	else {
 		it->second.push_back(value);
 	}
+	
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 }
 
 bool isQuestItem(TESForm* item) {
+#ifdef TRACE
+	TRACEMESSAGE(item, "Start: %s", __func__);
+#endif
 	if (item->IsQuestItem()) {
+#ifdef TRACE
+		TRACEMESSAGE("End  : %s isQuestItem", __func__);
+#endif
 		return true;
 	}
 	TESScriptableForm* scriptForm = OBLIVION_CAST(item, TESForm, TESScriptableForm);
 	if (scriptForm != NULL && scriptForm->script != NULL) {
+#ifdef TRACE
+		TRACEMESSAGE("End  : %s, is scripted", __func__);
+#endif
 		return true;
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 	return false;
 }
 
 bool tryToAddForm(TESForm* f) {
+#ifdef TRACE
+	TRACEMESSAGE(f,"Start: %s", __func__);
+#endif
 	ItemMapPtr ptr = NULL;
 	UInt32 key = 0xFFFFFFFF;
 	const char* name = GetFullName(f);
 	if (name[0] == '<') {
+#ifdef TRACE
+		TRACEMESSAGE(f,"End  : %s, name is less than", __func__);
+#endif
 		return false;
 	}
 	if (obrnFlag == NULL && f->GetModIndex() == randId && f->GetFormType() == kFormType_Misc && strcmp(name, "You should not see this") == 0) {
 		obrnFlag = f;
 		MESSAGE("OBRN Flag found as %08X", f->refID);
+#ifdef TRACE
+		TRACEMESSAGE(f,"End  : %s, obrn flag not found", __func__);
+#endif
 		return false;
 	}
 	if (f->GetModIndex() == 0xFF || skipMod[f->GetModIndex()]) {
+#ifdef TRACE
+		TRACEMESSAGE(f,"End  : %s skipped", __func__);
+#endif
 		return false;
 	}
 	if (f->GetFormType() != kFormType_Creature && f->IsQuestItem() && oExcludeQuestItems) {
+#ifdef TRACE
+		TRACEMESSAGE(f,"End  : %s quest items excluded", __func__);
+#endif
 		return false;
 	}
 	if (allAdded.find(f->refID) != allAdded.end()) {
+#ifdef TRACE
+		TRACEMESSAGE(f,"End  : %s, refId not found", __func__);
+#endif
 		return false;
 	}
 	if (strncmp(name, "aaa", 3) == 0) {
 		//exception for some test objects that typically don't even have a working model
+#ifdef TRACE
+		TRACEMESSAGE(f,"End  : %s test objects without working model", __func__);
+#endif
 		return false;
 	}
 	switch (f->GetFormType()) {
@@ -272,6 +430,9 @@ bool tryToAddForm(TESForm* f) {
 					strncmp(model, "GobLegs01.NIF", 13))) {
 					allCreatures.push_back(f->refID);
 					allAdded.insert(f->refID);
+#ifdef TRACE
+					TRACEMESSAGE(f,"End  : %s grummites exception", __func__);
+#endif
 					return true;
 				}
 			}
@@ -330,12 +491,21 @@ bool tryToAddForm(TESForm* f) {
 	}
 	if (ptr != NULL && key != 0xFFFFFFFF) {
 		addOrAppend(ptr, key, f->refID);
+#ifdef TRACE
+		TRACEMESSAGE(f,"End  : %s  return true", __func__);
+#endif
 		return true;
 	}
+#ifdef TRACE
+	TRACEMESSAGE(f,"End  : %s return false", __func__);
+#endif
 	return false;
 }
 
 bool refIsItem(TESObjectREFR* ref) {
+#ifdef TRACE
+	TRACEMESSAGE(ref,"Start: %s", __func__);
+#endif
 	switch (ref->baseForm->GetFormType()) {
 	case kFormType_Armor:
 	case kFormType_Clothing:
@@ -349,20 +519,35 @@ bool refIsItem(TESObjectREFR* ref) {
 	case kFormType_Key:
 	case kFormType_AlchemyItem:
 	case kFormType_SigilStone:
+#ifdef TRACE
+		TRACEMESSAGE(ref,"End  : %s True", __func__);
+#endif
 		return true;
 	default:
+#ifdef TRACE
+		TRACEMESSAGE(ref,"End  : %s False", __func__);
+#endif
 		return false;
 	}
 }
 
 bool itemIsEquippable(TESForm* item) {
+#ifdef TRACE
+	TRACEMESSAGE(item,"Start: %s", __func__);
+#endif
 	switch (item->GetFormType()) {
 	case kFormType_Armor:
 	case kFormType_Clothing:
 	case kFormType_Weapon:
 	case kFormType_Ammo:
+#ifdef TRACE
+		TRACEMESSAGE(item,"End  : %s true", __func__);
+#endif
 		return true;
 	default:
+#ifdef TRACE
+		TRACEMESSAGE(item,"End  : %s false", __func__);
+#endif
 		return false;
 	}
 }
@@ -440,9 +625,18 @@ const char* formToString[] = {
 };
 
 const char* FormToString(int form) {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	if (form >= 0 && form < sizeof(formToString) / sizeof(const char*)) {
+#ifdef TRACE
+		TRACEMESSAGE("End  : %s", __func__);
+#endif
 		return formToString[form];
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s  Unknown", __func__);
+#endif
 	return "Unknown";
 }
 
@@ -451,16 +645,25 @@ int myrand(int min, int max) {
 }
 
 bool getFormsFromLeveledList(TESLevItem* lev, std::map<UInt32, TESForm*>& forms) {
+#ifdef TRACE
+	TRACEMESSAGE(lev, "Start: %s", __func__);
+#endif
 	auto data = lev->leveledList.list.Info();
 	auto next = lev->leveledList.list.Next();
 	while (data != NULL) {
 		if (data->form->GetFormType() == kFormType_LeveledItem) {
 			if (!getFormsFromLeveledList(OBLIVION_CAST(data->form, TESForm, TESLevItem), forms)) {
+#ifdef TRACE
+				TRACEMESSAGE(lev,"End  : %s not get forms", __func__);
+#endif
 				return false;
 			}
 		}
 		else {
 			if (isQuestItem(data->form) && oExcludeQuestItems) {
+#ifdef TRACE
+				TRACEMESSAGE(lev,"End  : %s exclude quest items", __func__);
+#endif
 				return false;
 			}
 			forms.insert(std::make_pair(data->form->GetFormType(), data->form));
@@ -471,24 +674,48 @@ bool getFormsFromLeveledList(TESLevItem* lev, std::map<UInt32, TESForm*>& forms)
 		data = next->Info();
 		next = next->Next();
 	}
+#ifdef TRACE
+	TRACEMESSAGE(lev,"End  : %s", __func__);
+#endif
 	return true;
 }
 
 void getInventoryFromTESLevItem(TESLevItem* lev, std::map<TESForm*, int>& itemList, bool addQuestItems) {
+#ifdef _DEBUG
+	TRACEMESSAGE(lev,"Start: %s", __func__);
+#endif
 	auto data = lev->leveledList.list.Info();
 	auto next = lev->leveledList.list.Next();
 	while (data != NULL) {
+#ifdef _DEBUG
+		MESSAGE("data not = null");
+#endif
 		if (data->form->GetFormType() == kFormType_LeveledItem) {
+#ifdef _DEBUG
+			MESSAGE("for %08X is a leveled item, count = %lu", data->form, data->count);
+#endif
 			getInventoryFromTESLevItem(OBLIVION_CAST(data->form, TESForm, TESLevItem), itemList, addQuestItems);
 		}
 		else {
 			if (!isQuestItem(data->form) || addQuestItems) {
+#ifdef _DEBUG
+				MESSAGE("looking for item %08X count = %lu", data->form, data->count);
+#endif
 				auto it = itemList.find(data->form);
-				int count = 1 > data->count ? 1 : data->count;
+#ifdef _DEBUG
+				MESSAGE("found dataform at %08X and put into it at %08X with a count of %i", data->form, it, data->count);
+#endif
+				UINT16 count = 1 > data->count ? 1 : data->count;
 				if (it == itemList.end()) {
+#ifdef _DEBUG
+					MESSAGE("inserting %08X", data->form);
+#endif
 					itemList.insert(std::make_pair(data->form, count));
 				}
 				else {
+#ifdef _DEBUG
+					MESSAGE("Incrementing %08X from %i by %i for %i", data->form, it->second, count, it->second + count);
+#endif
 					it->second += count;
 				}
 			}
@@ -499,34 +726,65 @@ void getInventoryFromTESLevItem(TESLevItem* lev, std::map<TESForm*, int>& itemLi
 		data = next->Info();
 		next = next->Next();
 	}
+#ifdef _DEBUG
+	TRACEMESSAGE(lev,"End  : %s", __func__);
+#endif
 }
 
 std::pair<TESForm*, int> getFormFromTESLevItem(TESLevItem* lev, bool addQuestItems) {
+#ifdef _DEBUG	
+	TRACEMESSAGE(lev,"Start: %s", __func__);
+#endif
 	std::map<TESForm*, int> itemList;
 	getInventoryFromTESLevItem(lev, itemList, addQuestItems);
 	if (!itemList.size()) {
+#ifdef _DEBUG
+		TRACEMESSAGE(lev,"End  : %s item list size = 0", __func__);
+#endif
 		return std::make_pair((TESForm*)NULL, (int)0);
 	}
 	int r = myrand(0, itemList.size() - 1), i = -1;
+#ifdef _DEBUG
+	MESSAGE("looking for %i in %i", r, itemList.size());
+#endif
 	for (auto it : itemList) {
 		if (++i == r) {
 #ifdef _DEBUG
 			MESSAGE("%s: we are returning %s %08X from the leveled list", __FUNCTION__, GetFullName(it.first), it.second);
+#ifdef TRACE
+			TRACEMESSAGE(lev,"End  : %s", __func__);
+#endif
 #endif
 			return it;
 		}
 	}
+#ifdef _DEBUG
+	TRACEMESSAGE(lev,"End  : %s final null", __func__);
+#endif
 	return std::make_pair((TESForm*)NULL, (int)0);
 }
 
 bool getInventoryFromTESContainer(TESContainer* container, std::map<TESForm*, int>& itemList, bool addQuestItems) {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	bool hasFlag = false;
 	if (container == nullptr)
+	{
+#ifdef TRACE
+		TRACEMESSAGE("End  : %s container null", __func__);
+#endif
 		return false;
+	}
 
 	auto data = container->list.Info();
 	if (data == nullptr)
+	{
+#ifdef TRACE
+		TRACEMESSAGE("End  : %s container list info null", __func__);
+#endif
 		return false;
+	}
 
 	auto next = container->list.Next();
 	while (data != NULL) {
@@ -545,7 +803,7 @@ bool getInventoryFromTESContainer(TESContainer* container, std::map<TESForm*, in
 			}
 			else if (!isQuestItem(data->type) || addQuestItems) {
 				auto it = itemList.find(data->type);
-				int count = 1 > data->count ? 1 : data->count;
+				SInt32 count = 1 > data->count ? 1 : data->count;
 				if (it == itemList.end()) {
 					itemList.insert(std::make_pair(data->type, count));
 				}
@@ -560,10 +818,16 @@ bool getInventoryFromTESContainer(TESContainer* container, std::map<TESForm*, in
 		data = next->Info();
 		next = next->Next();
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 	return hasFlag;
 }
 
 bool getContainerInventory(TESObjectREFR* ref, std::map<TESForm*, int> & itemList, bool addQuestItems) {
+#ifdef TRACE
+	TRACEMESSAGE(ref,"Start: %s", __func__);
+#endif
 	bool hasFlag = false;
 	ExtraContainerChanges* cont = (ExtraContainerChanges*)ref->baseExtraList.GetByType(kExtraData_ContainerChanges);
 	while (cont != NULL && cont->data != NULL && cont->data->objList != NULL) {
@@ -602,40 +866,76 @@ bool getContainerInventory(TESObjectREFR* ref, std::map<TESForm*, int> & itemLis
 	if (ref->GetFormType() == kFormType_ACRE && !itemList.size()) {
 		TESActorBase* actorBase = OBLIVION_CAST(ref->baseForm, TESForm, TESActorBase);
 		if (actorBase == NULL) {
+#ifdef TRACE
+			TRACEMESSAGE(ref,"End  : %s actorbase is null", __func__);
+#endif
 			return false;
 		}
+#ifdef TRACE
+		TRACEMESSAGE(ref,"End  : %s" , __func__);
+#endif
 		return getInventoryFromTESContainer(&actorBase->container, itemList, addQuestItems);
 	}
+#ifdef TRACE
+	TRACEMESSAGE(ref,"End  : %s final return", __func__);
+#endif
 	return hasFlag;
 }
 
 int getPlayerLevel() {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	TESActorBase* actorBase = OBLIVION_CAST(*g_thePlayer, PlayerCharacter, TESActorBase);
 	if (actorBase == NULL) {
+#ifdef TRACE
+		TRACEMESSAGE("End  : %s actorbase is null", __func__);
+#endif
 		return 0;
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 	return actorBase->actorBaseData.level;
 }
 
 int getRefLevelAdjusted(TESObjectREFR* ref) {
+#ifdef TRACE
+	TRACEMESSAGE(ref,"Start: %s", __func__);
+#endif
 	if (!ref->IsActor()) {
+#ifdef TRACE
+		TRACEMESSAGE(ref,"End  : %s ref is not an actor", __func__);
+#endif
 		return 1;
 	}
 	Actor* actor = OBLIVION_CAST(ref, TESObjectREFR, Actor);
 	TESActorBase* actorBase = OBLIVION_CAST(actor->baseForm, TESForm, TESActorBase);
 	//return min(1, actorBase->actorBaseData.IsPCLevelOffset() ? getPlayerLevel() + actorBase->actorBaseData.level : actorBase->actorBaseData.level);
 	auto ret = actorBase->actorBaseData.IsPCLevelOffset() ? getPlayerLevel() + actorBase->actorBaseData.level : actorBase->actorBaseData.level;
+#ifdef TRACE
+	TRACEMESSAGE(ref,"End  : %s", __func__);
+#endif
 	return 1 < ret ? 1 : ret;
 }
 
 void randomizeInventory(TESObjectREFR* ref) {
+#ifdef TRACE
+	TRACEMESSAGE(ref,"Start: %s", __func__);
+#endif
 	if (allGenericItems.size() == 0 || allWeapons.size() == 0 || allClothingAndArmor.size() == 0) {
+#ifdef TRACE
+		TRACEMESSAGE(ref,"End  : %s sizes all 0", __func__);
+#endif
 		return;
 	}
 	std::map<TESForm*, int> removeItems;
 	bool hasFlag = getContainerInventory(ref, removeItems, !oExcludeQuestItems);
 	if (ref->GetFormType() == kFormType_ACRE) {
 		if (obrnFlag == NULL || hasFlag) {
+#ifdef TRACE
+			TRACEMESSAGE(ref,"End  : %s obrnFlag is null", __func__);
+#endif
 			return;
 		}
 #ifdef _DEBUG
@@ -679,6 +979,9 @@ void randomizeInventory(TESObjectREFR* ref) {
 	}
 	removeItems.clear();
 	if (oRandInventory == 1) {
+#ifdef TRACE
+		TRACEMESSAGE(ref,"End  : %s orandInventory = 1", __func__);
+#endif
 		return;
 	}
 	//granting random items
@@ -1200,62 +1503,113 @@ void randomizeInventory(TESObjectREFR* ref) {
 			}
 		}
 	}
+#ifdef TRACE
+	TRACEMESSAGE(ref,"End  : %s", __func__);
+#endif
 }
 
 TESForm* getFormFromLeveledList(TESLevItem* lev) {
+#ifdef TRACE
+	TRACEMESSAGE(lev,"Start: %s", __func__);
+#endif
 	if (lev == NULL) {
+#ifdef TRACE
+		TRACEMESSAGE(lev, "End  : %s lev is null", __func__);
+#endif
 		return NULL;
 	}
 	std::map<UInt32, TESForm*> forms;
 	if (!getFormsFromLeveledList(lev, forms) || !forms.size()) {
+#ifdef TRACE
+		TRACEMESSAGE(lev, "End  : %s forms is null", __func__);
+#endif
 		return NULL;
 	}
 	int i = -1, cnt = myrand(0, forms.size() - 1);
 	auto it = forms.begin();
 	while (it != forms.end()) {
 		if (++i == cnt) {
+#ifdef TRACE
+			TRACEMESSAGE(lev, "End: %s", __func__);
+#endif
 			return it->second;
 		}
 		++it;
 	}
+#ifdef TRACE
+	TRACEMESSAGE(lev, "End  : %s return null", __func__);
+#endif
 	return NULL;
 }
 
 bool getRandom(TESForm* f, UInt32& out) {
+#ifdef TRACE
+	TRACEMESSAGE(f,"Start: %s", __func__);
+#endif
 	if (!allItems.size()) {
+#ifdef TRACE
+		TRACEMESSAGE(f,"End  : %s allitems is empty", __func__);
+#endif
 		return false;
 	}
 	if (f == NULL) {
+#ifdef TRACE
+		TRACEMESSAGE(f,"End  : %s tesform f is null", __func__);
+#endif
 		return false;
 	}
 	if (oExcludeQuestItems && isQuestItem(f)) {
+#ifdef TRACE
+		TRACEMESSAGE(f,"End  : %s Quest items excluded ", __func__);
+#endif
 		return false;
 	}
 	if (f->GetModIndex() != 0xFF && f->GetModIndex() == randId) {
 		//if (f->GetModIndex() != 0xFF && skipMod[f->GetModIndex()]) { //very important!
+#ifdef TRACE
+		TRACEMESSAGE(f, "End  : %s f->getmodindex at 255 or randID - randID = %i", __func__, randId);
+#endif
 		return false;
 	}
 	out = allItems[rand() % allItems.size()];
+#ifdef TRACE
+	TRACEMESSAGE(f,"End  : %s", __func__);
+#endif
 	return true;
 }
 
 bool getRandomByType(TESForm *f, UInt32& out) {
+#ifdef TRACE
+	TRACEMESSAGE(f,"Start: %s", __func__);
+#endif
 	ItemMapPtr ptr = NULL;
 	UInt32 key = 0xFFFFFFFF;
 	if (f == NULL) {
+#ifdef TRACE
+		TRACEMESSAGE(f,"End  : %s - tesform f is null", __func__);
+#endif
 		return false;
 	}
 	if (oExcludeQuestItems && isQuestItem(f)) {
+#ifdef TRACE
+		TRACEMESSAGE(f,"End  : %s quest items excluded", __func__);
+#endif
 		return false;
 	}
 	if (f->GetModIndex() != 0xFF && f->GetModIndex() == randId) {
 	//if (f->GetModIndex() != 0xFF && skipMod[f->GetModIndex()]) { //very important!
+#ifdef TRACE
+		TRACEMESSAGE(f, "End  : %s f->getmodIndex is 255 or randid, randid = %i", __func__, randId);
+#endif
 		return false;
 	}
 	switch (f->GetFormType()) {
 	case kFormType_LeveledItem:
 	{
 		TESLevItem* lev = OBLIVION_CAST(f, TESForm, TESLevItem);
+#ifdef TRACE
+		TRACEMESSAGE(f, "End  : %s lev = OBLIVION_CAST(f, TESForm, TESLevItem)", __func__);
+#endif
 		return getRandomByType(getFormFromLeveledList(lev), out);
 	}
 	case kFormType_Armor:
@@ -1306,53 +1660,92 @@ bool getRandomByType(TESForm *f, UInt32& out) {
 		break;
 	}
 	if (ptr != NULL && key != 0xFFFFFFFF) {
+#ifdef TRACE
+		TRACEMESSAGE(f, "End  : %s", __func__);
+#endif
 		return getRandomForKey(ptr, key, out);
 	}
+#ifdef TRACE
+	TRACEMESSAGE(f, "End  : %s return false", __func__);
+#endif
 	return false;
 }
 
 bool getRandomBySetting(TESForm* f, UInt32& out, int option) {
+#ifdef TRACE
+	TRACEMESSAGE(f, "Start: %s", __func__);
+#endif
 	switch (option) {
 	case 0:
+#ifdef TRACE
+		TRACEMESSAGE(f, "End  : %s case 0", __func__);
+#endif
 		return false;
 	case 1:
+#ifdef TRACE
+		TRACEMESSAGE(f, "End  : %s case 1", __func__);
+#endif
 		return getRandomByType(f, out);
 	case 2:
+#ifdef TRACE
+		TRACEMESSAGE(f, "End  : %s case 2", __func__);
+#endif
 		return getRandom(f, out);
 	default:
 		MESSAGE("Invalid option %i for getRandomBySetting", option);
+#ifdef TRACE
+		TRACEMESSAGE(f, "End  : %s invalid setting", __func__);
+#endif
 		return false;
 	}
 }
 
 void randomize(TESObjectREFR* ref, const char* function) {
+#ifdef TRACE
+	TRACEMESSAGE(ref, "Start: %s", __func__);
+#endif
 #ifdef _DEBUG
 	MESSAGE("%s: Attempting to randomize %s %08X", function, GetFullName(ref), ref->refID);
 #endif
 	if (ref->GetFormType() == kFormType_ACRE) {
 		if (allCreatures.size() == 0) {
+#ifdef TRACE
+			TRACEMESSAGE(ref, "End  : %s allcreatures is empty", __func__);
+#endif
 			return;
 		}
 		if (strcmp(function, "ESP") == 0) {
 			QueueUIMessage_2("Randomizing creatures through the spell may cause issues", 1000, NULL, NULL);
 		}
 		else if (!oRandCreatures) {
+#ifdef TRACE
+			TRACEMESSAGE(ref, "End  : %s oRandCreatures is 0", __func__);
+#endif
 			return;
 		}
 		Actor* actor = OBLIVION_CAST(ref, TESObjectREFR, Actor);
 		if (actor == NULL) {
+#ifdef TRACE
+			TRACEMESSAGE(ref, "End  : %s actor = null", __func__);
+#endif
 			return;
 		}
 		UInt32 health = actor->GetBaseActorValue(kActorVal_Health), aggression = actor->GetActorValue(kActorVal_Aggression);//actor->GetBaseActorValue(kActorVal_Aggression);
 		if (health == 0) {
 			if (loading_game) {
 				toRandomize.push_back(ref);
+#ifdef TRACE
+				TRACEMESSAGE(ref, "End  : %s game loading", __func__);
+#endif
 				return;
 			}
 #ifdef _DEBUG
 			MESSAGE("%s: Dead creature %s %08X will be treated as a container", function, GetFullName(ref), ref->refID);
 #endif
 			randomizeInventory(ref);
+#ifdef TRACE
+			TRACEMESSAGE(ref, "End  : %s dead creature treated as container", __func__);
+#endif
 			return;
 		}
 		std::map<TESForm*, int> keepItems;
@@ -1378,6 +1771,9 @@ void randomize(TESObjectREFR* ref, const char* function) {
 	}
 	else if (refIsItem(ref)) {
 		if (!oWorldItems) {
+#ifdef TRACE
+			TRACEMESSAGE(ref, "End: %s oWorldItems is 0", __func__);
+#endif
 			return;
 		}
 #ifdef _DEBUG
@@ -1396,4 +1792,7 @@ void randomize(TESObjectREFR* ref, const char* function) {
 	else {
 		randomizeInventory(ref);
 	}
+#ifdef TRACE
+	TRACEMESSAGE(ref, "End  : %s", __func__);
+#endif
 }

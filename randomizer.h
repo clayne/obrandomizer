@@ -137,3 +137,4 @@ bool refIsItem(TESObjectREFR* ref);
 void randomizeInventory(TESObjectREFR* ref);
 bool getContainerInventory(TESObjectREFR* ref, std::map<TESForm*, int>& itemList, bool addQuestItems);
 void MESSAGE(const char* format, ...);
+void TRACEMESSAGE(const char* format, ...);

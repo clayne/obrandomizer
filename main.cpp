@@ -23,6 +23,9 @@ typedef int(__thiscall* CompileFiles_t)(DWORD*, char, char);
 CompileFiles_t CompileFiles = NULL;
 
 int __fastcall CompileFiles_Hook(DWORD* _this, void* _edx, char a2, char a3) {
+#ifdef TRACE
+	TRACEMESSAGE( "Start: %s", __func__); 
+#endif
 	if (!checked_mods) {
 		srand(time(NULL));
 		InitModExcludes();
@@ -31,14 +34,22 @@ int __fastcall CompileFiles_Hook(DWORD* _this, void* _edx, char a2, char a3) {
 	}
 	const ModEntry** activeModList = (*g_dataHandler)->GetActiveModList();
 	const auto modCount = (*g_dataHandler)->GetActiveModCount();
-#ifdef TRACE
 	MESSAGE("Mod List");
 
 	for (int n = 0; n < modCount; n++)
-		MESSAGE("[%i] %s ", n, activeModList[n]->data->name);
+	{
+		auto modName = activeModList[n]->data->name;
+		if (modName != nullptr && std::strlen(modName) > 0 && std::strlen(modName) < 255)
+			MESSAGE("[%i] %s ", n, activeModList[n]->data->name);
+	}
+#ifdef _DEBUG
+	MESSAGE("Starting CompileFiles");
 #endif
 
 	int result = CompileFiles(_this, a2, a3);
+#ifdef _DEBUG
+	MESSAGE("Ended CompileFiles");
+#endif
 	if (result) {
 		fillUpWpRanges();
 		fillUpClothingRanges();
@@ -55,6 +66,7 @@ int __fastcall CompileFiles_Hook(DWORD* _this, void* _edx, char a2, char a3) {
 			allItems.push_back(it);
 		}
 		if (obrnFlag == NULL) {
+			MESSAGE("Couldn't find OBRN Flag in the loaded files. Some features will not work properly.");
 			_ERROR("Couldn't find OBRN Flag in the loaded files. Some features will not work properly.");
 		}
 		allAdded.clear();
@@ -167,6 +179,9 @@ int __fastcall CompileFiles_Hook(DWORD* _this, void* _edx, char a2, char a3) {
 		MESSAGE("There are %u weapons, %u generic items, %u pieces of clothing / armor and %u creatures in the lists", numWeapons, numGenericItems, numArmorClothing, numCreatures);
 #endif
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 	return result;
 }
 
@@ -184,26 +199,44 @@ typedef int(__thiscall* ConstructObject_t)(unsigned char*, int, char);
 ConstructObject_t ConstructObject = NULL;
 
 int __fastcall ConstructObject_Hook(unsigned char* _this, void* _edx, int a2, char a3) { //a3 == 1 -> reading from the first file? (master?)
-	const ModEntry** activeModList = (*g_dataHandler)->GetActiveModList();
-	TESForm* form;
-	int result;
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 
-	__try {
-		result = ConstructObject(_this, a2, a3);
+	const ModEntry** activeModList = (*g_dataHandler)->GetActiveModList();
+	int result = 0;
+
+	if (_this == nullptr)
+	{
+		MESSAGE("Exiting from ConstructObject becasue _this is null.");
+		return 0;
 	}
-	__except (filter(GetExceptionCode(), GetExceptionInformation())) {
-		MESSAGE("Access Violation Occured");
+
+	/*
+	if (!a3)
+	{
+		MESSAGE("Exiting from ConstructObject becasue a3 is null.");
+		return 0;
 	}
+	*/
+
+	result = ConstructObject(_this, a2, a3);
+
 	if (result) {
 		UInt32 refID = *((UInt32*)(a2 + 584));
 		TESForm* form = LookupFormByID(refID);
 		void* retAddress = _ReturnAddress();
 		if (form == NULL) {
+#ifdef TRACE
+			TRACEMESSAGE("End  : %s - form is null", __func__);
+#endif
 			return result;
 		}
 		if (skipMod[form->GetModIndex()])
 		{
-			MESSAGE("Skipping %i", form->GetModIndex());
+#ifdef TRACE
+			TRACEMESSAGE("End: %s Skipping %i", __func__, form->GetModIndex());
+#endif
 			return 0;
 		}
 
@@ -225,6 +258,10 @@ int __fastcall ConstructObject_Hook(unsigned char* _this, void* _edx, int a2, ch
 			}
 		}
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
+
 	return result;
 }
 
@@ -259,6 +296,10 @@ typedef int(__thiscall* AddItem_t)(int, TESForm*, int, char);
 AddItem_t AddItem = NULL;
 
 int __fastcall AddItem_Hook(int _this, void* _edx, TESForm* a2, int a3, char a4) {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
+
 	UInt32 refID;
 	void* retAddress = _ReturnAddress();
 	if (oAddItems && !IsConsoleOpen() && retAddress == (void*)0x00507419 /*called within a script*/ 
@@ -267,6 +308,9 @@ int __fastcall AddItem_Hook(int _this, void* _edx, TESForm* a2, int a3, char a4)
 			a2 = replacement;
 		}
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 	return AddItem(_this, a2, a3, a4);
 }
 
@@ -275,6 +319,10 @@ typedef TESForm* (__stdcall* LoadForm_t)(int, UInt32*);
 LoadForm_t LoadForm = NULL;
 
 TESForm* __stdcall LoadForm_Hook(int a1, UInt32* a2) {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
+
 	TESForm* result = LoadForm(a1, a2);
 	if (oRandCreatures > 1 && result != NULL) {
 		if (result->GetFormType() == kFormType_ACRE && (a1 >> 24) == 0xFF) {
@@ -284,6 +332,10 @@ TESForm* __stdcall LoadForm_Hook(int a1, UInt32* a2) {
 			ref->Update3D();
 		}
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
+
 	return result;
 }
 
@@ -292,6 +344,10 @@ typedef unsigned int(__thiscall* LoadObject_t)(DWORD*, int, int);
 LoadObject_t LoadObject = NULL;
 
 unsigned int __fastcall LoadObject_Hook(DWORD* _this, void* _edx, int a2, int a3) {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
+
 	for (auto it = restoreFlags.begin(); it != restoreFlags.end(); ++it) {
 		if ((it->second & TESObjectREFR::kFlags_Persistent) != (it->first->flags & TESObjectREFR::kFlags_Persistent)) {
 			it->first->flags ^= TESObjectREFR::kFlags_Persistent;
@@ -304,6 +360,9 @@ unsigned int __fastcall LoadObject_Hook(DWORD* _this, void* _edx, int a2, int a3
 	}
 	restoreFlags.clear();
 	unsigned int result = LoadObject(_this, a2, a3);
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 	return result;
 }
 
@@ -312,6 +371,10 @@ typedef void(__thiscall* CalcLevListOuter_t)(TESLeveledList*, int, DWORD*, int);
 CalcLevListOuter_t CalcLevListOuter = NULL;
 
 void __fastcall CalcLevListOuter_Hook(TESLeveledList* _this, void* _edx, int a2, DWORD* a3, int a4) {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
+
 	//this = TESLeveledList
 	//a3 = count
 	//a4 + 8 = list of returned tesforms
@@ -342,6 +405,9 @@ void __fastcall CalcLevListOuter_Hook(TESLeveledList* _this, void* _edx, int a2,
 			result = result->next;
 		}
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 }
 
 //465D57 is the last addr where its still good
@@ -356,20 +422,28 @@ char __fastcall LoadGame_Hook(int _this, void* _edx, int a2, int a3, char a4) {
 	//a) this hacky solution seems to work
 	//b) i was meant to release this mod 3 months ago
 	//c) it would take time
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	loading_game = true;
 	char result;
-	__try {
-		result = LoadGame(_this, a2, a3, a4);
+
+	if (!a4)
+	{
+		MESSAGE("Exiting from load game because a4 is null.");
+		return 0;
 	}
-	__except (filter(GetExceptionCode(), GetExceptionInformation())) {
-		MESSAGE("Access Violation Occured");
-	}
+
+	result = LoadGame(_this, a2, a3, a4);
 
 	loading_game = false;
 	for (auto it : toRandomize) {
 		randomize(it, __FUNCTION__);
 	}
 	toRandomize.clear();
+#ifdef TRACE
+	TRACEMESSAGE("End: %s", __func__);
+#endif
 	return result;
 }
 
@@ -385,10 +459,16 @@ void InitHooks() {
 }
 
 unsigned int getNumItems(ItemMapPtr map) {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	unsigned int num = 0;
 	for (auto it = map->begin(); it != map->end(); ++it) {
 		num += (*it).second.size();
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 	return num;
 }
 
@@ -399,21 +479,33 @@ unsigned int getNumItems(ItemMapPtr map) {
 #if OBLIVION
 
 bool Cmd_OBRNListsReady_Execute(COMMAND_ARGS) {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	*result = allCreatures.size() && allClothingAndArmor.size() && allGenericItems.size() && allWeapons.size() ? 1.0 : 0.0;
 	Console_Print("Randomizer's Lists Info:");
 	Console_Print("Number of creatures: %u", allCreatures.size());
 	Console_Print("Number of clothing/armor: %u", getNumItems(&allClothingAndArmor));
 	Console_Print("Number of generic items: %u", getNumItems(&allGenericItems));
 	Console_Print("Number of weapons: %u", getNumItems(&allWeapons));
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 	return true;
 }
 
 bool Cmd_OBRNRandomize_Execute(COMMAND_ARGS) {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	TESObjectREFR* ref = NULL;
 	*result = 0.0;
 	if (ExtractArgsEx(paramInfo, arg1, opcodeOffsetPtr, scriptObj, eventList, &ref)) {
 		randomize(ref, "ESP");
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 	return true;
 }
 
@@ -428,6 +520,9 @@ extern "C" {
 
 bool OBSEPlugin_Query(const OBSEInterface * obse, PluginInfo * info)
 {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	MESSAGE("query");
 
 	// fill out the info structure
@@ -441,6 +536,9 @@ bool OBSEPlugin_Query(const OBSEInterface * obse, PluginInfo * info)
 		if(obse->obseVersion < OBSE_VERSION_INTEGER)
 		{
 			_ERROR("OBSE version too old (got %u expected at least %u)", obse->obseVersion, OBSE_VERSION_INTEGER);
+#ifdef TRACE
+			TRACEMESSAGE("End  : %s - old OBSE", __func__);
+#endif
 			return false;
 		}
 
@@ -448,6 +546,9 @@ bool OBSEPlugin_Query(const OBSEInterface * obse, PluginInfo * info)
 		if(obse->oblivionVersion != OBLIVION_VERSION)
 		{
 			_ERROR("incorrect Oblivion version (got %08X need %08X)", obse->oblivionVersion, OBLIVION_VERSION);
+#ifdef TRACE
+			TRACEMESSAGE("End  : %s - wrong version of obse", __func__);
+#endif
 			return false;
 		}
 #endif
@@ -456,12 +557,18 @@ bool OBSEPlugin_Query(const OBSEInterface * obse, PluginInfo * info)
 		if(!g_serialization)
 		{
 			_ERROR("serialization interface not found");
+#ifdef TRACE
+			TRACEMESSAGE("End  : %s - serialization interface not found", __func__);
+#endif
 			return false;
 		}
 
 		if(g_serialization->version < OBSESerializationInterface::kVersion)
 		{
 			_ERROR("incorrect serialization version found (got %08X need %08X)", g_serialization->version, OBSESerializationInterface::kVersion);
+#ifdef TRACE
+			TRACEMESSAGE("End  : %s - incorrect serialization version", __func__);
+#endif
 			return false;
 		}
 
@@ -469,6 +576,9 @@ bool OBSEPlugin_Query(const OBSEInterface * obse, PluginInfo * info)
 		if (!g_arrayIntfc)
 		{
 			_ERROR("Array interface not found");
+#ifdef TRACE
+			TRACEMESSAGE("End  : %s - array interface not found", __func__);
+#endif
 			return false;
 		}
 
@@ -480,12 +590,17 @@ bool OBSEPlugin_Query(const OBSEInterface * obse, PluginInfo * info)
 	}
 
 	// version checks pass
-
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 	return true;
 }
 
 bool OBSEPlugin_Load(const OBSEInterface * obse)
 {
+#ifdef TRACE
+	TRACEMESSAGE("Start: %s", __func__);
+#endif
 	MESSAGE("load");
 
 	g_pluginHandle = obse->GetPluginHandle();
@@ -533,6 +648,9 @@ bool OBSEPlugin_Load(const OBSEInterface * obse)
 	else {
 		MESSAGE("Couldn't read command table");
 	}
+#ifdef TRACE
+	TRACEMESSAGE("End  : %s", __func__);
+#endif
 	return true;
 }
 
