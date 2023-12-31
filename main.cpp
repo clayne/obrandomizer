@@ -224,11 +224,16 @@ int __fastcall ConstructObject_Hook(unsigned char* _this, void* _edx, int a2, ch
 #endif
 			return result;
 		}
-		if (skipMod[form->GetModIndex()])
+#ifdef _DEBUG
+		if (form->GetModIndex() == randId)
+			MESSAGE("reviewing %i, %08x, files read = %d, isRef = %d, correct return address = %d", form->GetModIndex(), form->refID, files_read, form->IsReference(), ((retAddress == (void*)0x0044F221) ? 1 : 0));
+#endif
+		if (form->GetModIndex() != randId  && skipMod[form->GetModIndex()])
 		{
 #ifdef TRACE
 			TRACEMESSAGE("End: %s Skipping %i", __func__, form->GetModIndex());
 #endif
+			MESSAGE("skipping %i for ref %08x", form->GetModIndex(), form->refID);
 			return 0;
 		}
 

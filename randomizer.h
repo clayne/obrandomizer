@@ -122,6 +122,7 @@ extern std::map<TESObjectREFR*, UInt32> restoreFlags;
 
 extern bool loading_game;
 extern TESForm* obrnFlag;
+extern UInt8 randId;
 
 void InitModExcludes();
 void fillUpClothingRanges();

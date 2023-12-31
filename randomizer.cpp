@@ -368,9 +368,13 @@ bool isQuestItem(TESForm* item) {
 }
 
 bool tryToAddForm(TESForm* f) {
+
 #ifdef TRACE
 	TRACEMESSAGE(f,"Start: %s", __func__);
 #endif
+	if (f == nullptr)
+		return false;
+
 	ItemMapPtr ptr = NULL;
 	UInt32 key = 0xFFFFFFFF;
 	const char* name = GetFullName(f);
@@ -380,14 +384,16 @@ bool tryToAddForm(TESForm* f) {
 #endif
 		return false;
 	}
+
 	if (obrnFlag == NULL && f->GetModIndex() == randId && f->GetFormType() == kFormType_Misc && strcmp(name, "You should not see this") == 0) {
 		obrnFlag = f;
 		MESSAGE("OBRN Flag found as %08X", f->refID);
 #ifdef TRACE
-		TRACEMESSAGE(f,"End  : %s, obrn flag not found", __func__);
+		TRACEMESSAGE(f, "End  : %s, obrn flag not found", __func__);
 #endif
 		return false;
 	}
+
 	if (f->GetModIndex() == 0xFF || skipMod[f->GetModIndex()]) {
 #ifdef TRACE
 		TRACEMESSAGE(f,"End  : %s skipped", __func__);
